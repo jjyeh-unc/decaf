@@ -3,7 +3,7 @@ Determination of permissive and restraining cancerassociated fibroblast (DeCAF) 
 
 Here we provide an example dataset and walkthrough to performing predictions in R.
 
-Disclaimer: PurIST is patent pending and access/use is for not-for-profit research only.
+Disclaimer: DeCAF is patent pending and access/use is for not-for-profit research only.
 
 # Run DeCAF
 ```{r}
