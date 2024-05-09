@@ -5,16 +5,16 @@
 - R version 4.0.0 or newer is highly recommended.
 - Operating systems that are compatible with R version 4.0.0 or newer are required.
 - Non-standard hardware is not required.
-- Installation time is minimal by donwloading decaf_functions.R and decaf_classifier.Rdata.
+- Installation time is minimal by donwloading just decaf_functions.R, decaf_classifier.Rdata and example.rds.
 - A typical runtime for a dataset with around 150 samples is less than 5 seconds.
 
 This repo contains:
 
-A. function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run DeCAF. Users only need them downloaded to run DeCAF on a new dataset.
+A. function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run DeCAF, as well as an example dataframe (example.rds).
 
-B. an example dataframe (example.rds).
+B. newly generated bulk RNAseq (N=129, UNC-bulk) and scRNAseq (N=6, UNC-sc) data.
 
-C. all data and scripts used to train/validate DeCAF, and generate figures/tables associated with the manuscript (manuscript_data_scripts).
+C. scripts and other parsed public data used to train/validate DeCAF, and generate figures/tables associated with the manuscript (manuscript_data_scripts).
 
 Disclaimer: DeCAF is patent pending and access/use is for not-for-profit research only.
 
