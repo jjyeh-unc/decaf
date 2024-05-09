@@ -1,13 +1,4 @@
 # DeCAF: determination of permissive and restraining cancer-associated fibroblast subtypes
-
-- DeCAF is currently implemented in R.
-- R version 4.1.3 was used for DeCAF classifier development.
-- R version 4.1.3, 4.2.1 and 4.3.3 were used for testing.
-- R version 4.0.0 or newer is highly recommended.
-- Operating systems that are compatible with R version 4.0.0 or newer are required.
-- Non-standard hardware is not required.
-- Installation time is minimal by donwloading just decaf_functions.R, decaf_classifier.Rdata and example.rds.
-- A typical runtime for a dataset with around 150 samples is less than 5 seconds.
 - Disclaimer: DeCAF is patent pending and access/use is for not-for-profit research only.
 
 # This repo contains:
@@ -26,10 +17,23 @@ B. newly generated bulk RNAseq data (N=129, UNC-bulk).
 C. newly generated scRNAseq data (N=6, UNC-sc).
 
 
-# Install DeCAF
-Download decaf_functions.R, decaf_classifier.Rdata and example.rds in the working directory.
+# System requirements
+
+- DeCAF is currently implemented in R.
+- R version 4.1.3 was used for DeCAF classifier development.
+- R version 4.1.3, 4.2.1 and 4.3.3 were used for testing.
+- R version 4.0.0 or newer is highly recommended.
+- Operating systems that are compatible with R version 4.0.0 or newer are required.
+- Non-standard hardware is not required.
+
+
+# Installation
+- Download decaf_functions.R, decaf_classifier.Rdata and example.rds in the working directory.
+- Installation time is minimal by donwloading just decaf_functions.R, decaf_classifier.Rdata and example.rds.
+
 
 # Run DeCAF
+- A typical runtime for a dataset with around 150 samples is less than 5 seconds.
 ```{r}
 # load data objects and source functions
 load("decaf_classifier.Rdata")
