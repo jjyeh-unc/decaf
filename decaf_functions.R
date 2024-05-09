@@ -45,8 +45,8 @@ apply_decaf = function(data, classifier){
   guess[trainingPrediction >= .9 ] = "Strong permCAF"
   
   ## Put results together into dataframe
-  final = data.frame(Pred_prob_permCAF = trainingPrediction, Stroma_Subtype = classification, 
-                     Stroma_Subtype_graded = guess)
+  final = data.frame(DeCAF_prob = trainingPrediction, DeCAF = classification, 
+                     DeCAF_graded = guess)
   rownames(final) = make.names(colnames(data), unique = any(table(colnames(data)) > 1) )
   
   return(final)
