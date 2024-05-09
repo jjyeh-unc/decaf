@@ -2,7 +2,7 @@
 
 DeCAF is currently implemented in R. This repo contains:
 
-A. function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run DeCAF. Users only need them downloaded to run DeCAF on a new data.
+A. function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run DeCAF. Users only need them downloaded to run DeCAF on a new dataset.
 
 B. an example dataframe (example.rds).
 
