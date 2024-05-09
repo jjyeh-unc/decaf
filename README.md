@@ -1,7 +1,7 @@
 # DeCAF: determination of permissive and restraining cancer-associated fibroblast subtypes
 
 - DeCAF is currently implemented in R.
-- R version 4.3.3 was used for develpment/testing.
+- R version 4.3.3 was used for development/testing.
 - R version 4.0.0 or newer is highly recommended.
 - Operating systems that are compatible with R version 4.0.0 or newer are required.
 - Non-standard hardware is not required.
