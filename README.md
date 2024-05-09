@@ -132,10 +132,10 @@ apply_decaf = function(data, classifier){
   X=cbind(rep(1, nrow(indmat)), indmat)
   trainingPrediction = exp(X%*%c(fit$beta))/(1+exp(X%*%c(fit$beta)))
   
-  ## Obtain Stroma subtype
+  ## Obtain DeCAF subtype
   classification = c("restCAF","permCAF")[(trainingPrediction >= 0.5)^2 + 1]
   
-  ## Obtain Grade of Stroma Subtype
+  ## Obtain Grade of DeCAF Subtype
   guess = rep(1, length(trainingPrediction))
   guess[trainingPrediction < .1] = "Strong restCAF"
   guess[trainingPrediction >= .1 & trainingPrediction < .4] = "Likely restCAF"
