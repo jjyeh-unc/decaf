@@ -3,10 +3,10 @@ apply_decaf = function(data, classifier){
   # "data": a dataframe with unique official gene symbols as rownames
   # "classifier": the DeCAF classifier containing essential objects
   
-  ## Extract Gene Games
+  ## Extract gene names
   genes = rownames(data)
   
-  ## Extract Classifier 
+  ## Extract classifier 
   fit = classifier$fit
   if(is.null(fit$beta)) "Classifier Does Not Have Coefficients Assigned to beta"
   
