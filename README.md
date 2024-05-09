@@ -19,6 +19,9 @@ C. all data and scripts used to train/validate DeCAF, and generate figures/table
 Disclaimer: DeCAF is patent pending and access/use is for not-for-profit research only.
 
 
+# Installation
+Download decaf_functions.R, decaf_classifier.Rdata and example.rds in the working directory.
+
 # Run DeCAF
 ```{r}
 # load data objects and source functions
