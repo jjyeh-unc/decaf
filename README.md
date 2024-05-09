@@ -1,6 +1,14 @@
 # DeCAF: determination of permissive and restraining cancer-associated fibroblast subtypes
 
-DeCAF is currently implemented in R. This repo contains:
+- DeCAF is currently implemented in R.
+- R version 4.3.3 was used for develpment/testing.
+- R version 4.0.0 or newer is highly recommended.
+- Operating systems that are compatible with R version 4.0.0 or newer are required.
+- Non-standard hardware is not required.
+- Installation time is minimal by donwloading decaf_functions.R and decaf_classifier.Rdata.
+- A typical runtime for a dataset with around 150 samples is less than 5 seconds.
+
+This repo contains:
 
 A. function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run DeCAF. Users only need them downloaded to run DeCAF on a new dataset.
 
