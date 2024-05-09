@@ -1,9 +1,15 @@
-# DeCAF
-Determination of permissive and restraining cancerassociated fibroblast (DeCAF) subtypes
+# DeCAF: determination of permissive and restraining cancer-associated fibroblast subtypes
 
-Here we provide an example dataset and walkthrough to performing predictions in R.
+DeCAF is currently implemented in R. This repo contains:
+
+A. function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run DeCAF. Users only need them downloaded to run DeCAF on a new data.
+
+B. an example dataframe (example.rds).
+
+C. all data and scripts used to train/validate DeCAF, and generate figures/tables associated with the manuscripts (manuscript_data_scripts).
 
 Disclaimer: DeCAF is patent pending and access/use is for not-for-profit research only.
+
 
 # Run DeCAF
 ```{r}
