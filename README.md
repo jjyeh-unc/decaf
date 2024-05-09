@@ -2,10 +2,10 @@
 - Disclaimer: DeCAF is patent pending and access/use is for not-for-profit research only.
 
 # This repo contains:
-- Main DeCAF objects: function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run DeCAF, as well as an example dataframe (example.rds).
-- Scripts needed to reproduce manuscript results, including to train/validate DeCAF, and generate figures/tables (manuscript_scripts).
-- Processed datasets (manuscript_data).
-- Results, including figures and tables, involved in the manuscript (manuscript_results).
+- Main function (decaf_functions.R).
+- Classifier data (decaf_classifier.Rdata).
+- An example dataframe (example.rds).
+
 
 
 # System requirements
