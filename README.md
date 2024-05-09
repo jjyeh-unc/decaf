@@ -97,13 +97,13 @@ classifier$fit$beta
 # This is the description for the main function apply_decaf(data, classifier) to implement the DeCAF classifier.
 # This function is associated with Fig. 1a in the manuscript.
 
-# Load dataframe and classifier
+# Load dataframe (data) and classifier (classifier)
   # "data": a dataframe with unique official gene symbols as rownames
   # "classifier": the DeCAF classifier containing essential objects
   
-# Extract gene names
+# Extract gene names: genes = rownames(data)
   
-# Extract classifier 
+# Extract classifier: fit = classifier$fit
   
 # Keep only gene info for genes in classifier 
   # If there are missing genes, stop and print "genes missing".
