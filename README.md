@@ -24,12 +24,25 @@ classifier = decaf_classifier$classifier2
 # apply classifier 
 predictions = apply_decaf(data = dat, classifier = classifier)
 ```
-# Interpretate DeCAF result
+# Interpretate DeCAF output
 ```{r}
-The predictions object above contains a n by 3 dataframe.
-The 1st column is the predicted probability of each sample of belonging to the "permCAF" subtype. 
-The 2nd column is the subtype call based on a predicted probability cutoff of 0.5. Greater than 0.5 indicates the permCAF subtype, and less than 0.5 indicated the restCAF subtype. 
-The 3rd column is a graded DeCAF call, indicating the confidence of the call (Strong, Likely, Lean).
+# The predictions object above contains a n (samples) by 3 dataframe.
+# The 1st column is the predicted probability of each sample of belonging to the "permCAF" subtype. 
+# The 2nd column is the subtype call based on a predicted probability cutoff of 0.5. Greater than 0.5 indicates the permCAF subtype, and less than 0.5 indicated the restCAF subtype. 
+# The 3rd column is a graded DeCAF call, indicating the confidence of the call (Strong, Likely, Lean).
+
+print(predictions)
+                 DeCAF_permCAF_probability   DeCAF   DeCAF_graded
+TCGA.2L.AAQE.01A                0.51673518 permCAF   Lean permCAF
+TCGA.XD.AAUL.01A                0.99882687 permCAF Strong permCAF
+TCGA.3A.A9IN.01A                0.00117836 restCAF Strong restCAF
+TCGA.3A.A9IS.01A                0.44116428 restCAF   Lean restCAF
+TCGA.2L.AAQJ.01A                0.01071204 restCAF Strong restCAF
+TCGA.2L.AAQI.01A                0.06761943 restCAF Strong restCAF
+TCGA.3A.A9IB.01A                0.70824126 permCAF Likely permCAF
+TCGA.3A.A9IU.01A                0.99603845 permCAF Strong permCAF
+TCGA.2L.AAQM.01A                0.51673518 permCAF   Lean permCAF
+TCGA.FB.AAPS.01A                0.98306257 permCAF Strong permCAF
 ```
 
 # Print DeCAF TSP genes
