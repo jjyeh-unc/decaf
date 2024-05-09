@@ -11,7 +11,7 @@ apply_decaf = function(data, classifier){
   if(is.null(fit$beta)) "Classifier Does Not Have Coefficients Assigned to beta"
   
   ## Keep only gene info for genes in classifier 
-  data1 =  data[genes %in% classifier$TSPs,]
+  data1 = data[genes %in% classifier$TSPs,]
   rnames = rownames(data1)
   data1 = matrix(as.numeric(as.matrix(data1)), ncol = ncol(data1))
   rownames(data1) = rnames
@@ -32,10 +32,10 @@ apply_decaf = function(data, classifier){
   X=cbind(rep(1, nrow(indmat)), indmat)
   trainingPrediction = exp(X%*%c(fit$beta))/(1+exp(X%*%c(fit$beta)))
   
-  ## Obtain Stroma subtype
+  ## Obtain DeCAF subtype
   classification = c("restCAF","permCAF")[(trainingPrediction >= 0.5)^2 + 1]
   
-  ## Obtain Grade of Stroma Subtype
+  ## Obtain Grade of DeCAF Subtype
   guess = rep(1, length(trainingPrediction))
   guess[trainingPrediction < .1] = "Strong restCAF"
   guess[trainingPrediction >= .1 & trainingPrediction < .4] = "Likely restCAF"
