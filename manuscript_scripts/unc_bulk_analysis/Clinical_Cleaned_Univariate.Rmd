@@ -1,0 +1,1400 @@
+---
+title: "Clinical_Cleaned_Univariate"
+output: html_document
+date: "2023-12-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(openxlsx)
+library(survival)
+library(survminer)
+library(dplyr)
+library(gtsummary)
+
+```
+
+# Dataset
+
+```{r}
+
+dataset<-readRDS("/work/users/a/r/arthih/Laura_Clinical_Parsing/yehseq_pdac_pi.decaf_freeze_clinicalParsed_111723.rds")
+
+```
+
+## Data
+
+```{r}
+#PurIST with Clinical categorical
+
+#add PurIST columns from sampInfo to clinicalDat
+
+clinicalDat <- dataset$clinicalDatParsed
+
+clinicalDat$sampID <- colnames(dataset$ex)
+
+clinicalDat <- clinicalDat %>% 
+  left_join(dataset$subtypeCall)
+
+```
+
+```{r}
+
+clinicalDat <- clinicalDat %>% select_if(~ !all(is.na(.)))
+```
+
+```{r}
+
+# boxplot
+subset<-clinicalDat %>% 
+  select(age, race, sex, pre_op_kg, pre_op_cm, pre_op_bmi, tobacco_former_current_never, tobacco_py, alcohol_yn, dmstatus_1yrdef.yes.recent.no, dmstatus_2yrdef.yes.recent.no, personal_hx_ca_yn, preop_albumin, preop_ca199, preop_ecog, preop_cholangitis_yn, chronic_pancreatitis_yn, Recent.ABX, tumor_location.clean, `Location/Procedure`, Last.Event, Path, differentiation_clean_downstaged, differentiation_clean_upstaged,`Tumor.size.(path.report,.cm).updated`, Pos.LN, T.LN, T.impute.from.TumorSize.8thEd, N.impute.from.PosLN.8thEd, Lymphovascular.Invasion.clean, PNI.clean, `Margin.(close.<1mm)`, Stage.impute.TN.8thEd, Neoadj.Tx, Neoadj.Regimen.clean, neo_folfirinox.clean, neo_GA, neo_xrt.clean, neo_other, `preop.RT.(for.adeno.only).clean`, `preop.Chemo.(for.adeno.only)`, Path.Response.score.clean, `Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean`, `Adj.Chemo.(for.adeno.only)`, Adj_Tx.clean, `Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)`,`Recurrence.Event.(0=NED.1=radiographic.recurrence,.2.=.documented.chemical.recurrence.alone,.500=died.of.operation,.600.=.died.of.documented.non-PDAC.event.with.NED.900=unable.to.determine.due.to.lack.of.reccords,.950=unable.to.determine.due.to.indeterminate.imaging.990.=.non-resected.PDAC.case,.999=non-PDAC.case)`,`\\Recurrence.Event.(0=NED.1=radiographic.recurrence,.2.=.document\"`, Recur.Site, PurIST.prob, PurIST, PurIST.graded, DeCAF)
+
+subset %>% select_if(is.numeric) %>% boxplot()
+
+```
+
+```{r}
+
+summary <- clinicalDat %>% 
+  select(age, race, sex, pre_op_kg, pre_op_cm, pre_op_bmi, tobacco_former_current_never, tobacco_py, alcohol_yn, dmstatus_1yrdef.yes.recent.no, dmstatus_2yrdef.yes.recent.no, personal_hx_ca_yn, preop_albumin, preop_ca199, preop_ecog, preop_cholangitis_yn, chronic_pancreatitis_yn, Recent.ABX, tumor_location.clean, `Location/Procedure`, Last.Event, differentiation_clean_downstaged, differentiation_clean_upstaged,`Tumor.size.(path.report,.cm).updated`, Pos.LN, T.LN, T.impute.from.TumorSize.8thEd, N.impute.from.PosLN.8thEd, Lymphovascular.Invasion.clean, PNI.clean, `Margin.(close.<1mm)`, Stage.impute.TN.8thEd, Neoadj.Tx, Neoadj.Regimen.clean, neo_folfirinox.clean, neo_GA, neo_xrt.clean, Path.Response.score.clean, `Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean`, Adj_Tx.clean, `Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)`,`Recurrence.Event.(0=NED.1=radiographic.recurrence,.2.=.documented.chemical.recurrence.alone,.500=died.of.operation,.600.=.died.of.documented.non-PDAC.event.with.NED.900=unable.to.determine.due.to.lack.of.reccords,.950=unable.to.determine.due.to.indeterminate.imaging.990.=.non-resected.PDAC.case,.999=non-PDAC.case)`, PurIST.prob, PurIST, PurIST.graded, DeCAF) %>% 
+  tbl_summary(by = DeCAF, 
+              missing = "no", 
+              statistic = all_continuous() ~ "{median} ({min}-{max})",
+              type = list(c(chronic_pancreatitis_yn, alcohol_yn, personal_hx_ca_yn, preop_cholangitis_yn, Recent.ABX, Lymphovascular.Invasion.clean, PNI.clean, Neoadj.Tx, neo_folfirinox.clean, neo_GA,neo_xrt.clean, `Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean`, Adj_Tx.clean,`Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)`)~'categorical'),
+              digits = list(PurIST.prob~c(9,9))) %>% 
+  add_p(test=list(all_continuous()~'wilcox.test',all_categorical()~'fisher.test')) %>% bold_labels()
+
+
+```
+
+```{r}
+
+summary
+
+```
+
+
+```{r}
+
+summary %>% as_gt %>% gt::gtsave("/work/users/a/r/arthih/Laura_Clinical_Parsing/DeCAF_Clinical_121823.html")
+
+```
+
+#------------------------------------------------------------------------------------
+# Survival Analysis
+
+#### clincial subset
+
+Variables in clinicalDatParsed to be used for survival analysis (as marked in the excel by Jaewon,Jen Jen and Laura)
+
+Using imputed T N and Stage
+```{r}
+
+data_sub <-dataset$clinicalDatParsed %>%  select(age,
+                                                 pre_op_bmi,
+                                                 race, 
+                                                 sex, 
+                                                 tobacco_former_current_never, 
+                                                 alcohol_yn, 
+                                                 personal_hx_ca_yn,
+                                                 bileduct_stent_clean, 
+                                                 preop_ca199, 
+                                                 preop_cholangitis_yn,
+                                                 chronic_pancreatitis_yn,
+                                                 Recent.ABX, 
+                                                 tumor_location.clean,
+                                                 `Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)`,
+                                                 Path.Response.score.clean, 
+                                                 T.impute.from.TumorSize.8thEd, 
+                                                 N.impute.from.PosLN.8thEd,
+                                                 Pos.LN,
+                                                 T.LN,
+                                                 Lymphovascular.Invasion.clean, 
+                                                 PNI.clean,
+                                                 `Margin.(close.<1mm)`,
+                                                 Date.of.Surgery,
+                                                 Date.of.Dx,
+                                                 Final.Date,
+                                            `Overall.Survival.(diagnosis.to.death.in.months)`,
+                                            `Recurrence.Event.(0=NED.1=radiographic.recurrence,.2.=.documented.chemical.recurrence.alone,.500=died.of.operation,.600.=.died.of.documented.non-PDAC.event.with.NED.900=unable.to.determine.due.to.lack.of.reccords,.950=unable.to.determine.due.to.indeterminate.imaging.990.=.non-resected.PDAC.case,.999=non-PDAC.case)`,
+                                            differentiation_clean_upstaged, 
+                                            differentiation_clean_downstaged,
+                                            Stage.impute.TN.8thEd,
+                                            Neoadj.Regimen.clean,
+                                            neo_folfirinox.clean,
+                                            neo_GA,
+                                            neo_xrt.clean,
+                                            `Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean`,
+                                            Adj_Tx.clean,
+                                            `\\Recurrence.Event.(0=NED.1=radiographic.recurrence,.2.=.document\"`,
+                                            Recur.Date,
+                                            uniqID)
+
+```
+
+### Survdat
+
+Create a dataframe to be used for survival - Survdat
+
+```{r survdat}
+
+## Survival
+
+## parse clinical ---------------------------------------------------------------------
+survDat <- data.frame(sampID = colnames(dataset$ex), 
+                      time = dataset$clinicalDatParsed$`Overall.Survival.(OR.until.death)`,
+                      event = dataset$clinicalDatParsed$Last.Event,
+                      neoadj.tx = dataset$clinicalDatParsed$Neoadj.Tx,
+                      neoadj.tx.clean = dataset$clinicalDatParsed$Neoadj.Regimen.clean,
+                      M = dataset$clinicalDatParsed$M,
+                      uniqID=dataset$sampInfo$uniqID,
+                      time_diag = dataset$clinicalDatParsed$`Overall.Survival.(diagnosis.to.death.in.months)`,
+                      event_recur = dataset$clinicalDatParsed$`Recurrence.Event.(0=NED.1=radiographic.recurrence,.2.=.documented.chemical.recurrence.alone,.500=died.of.operation,.600.=.died.of.documented.non-PDAC.event.with.NED.900=unable.to.determine.due.to.lack.of.reccords,.950=unable.to.determine.due.to.indeterminate.imaging.990.=.non-resected.PDAC.case,.999=non-PDAC.case)`,
+                      whitelist = FALSE,
+                      stringsAsFactors = FALSE)
+
+survDat$event[survDat$event == 500 | 
+                 survDat$event ==900 |
+                 survDat$event ==600 |
+                survDat$event ==650 ] <- 0
+survDat$event[survDat$event == 2 | 
+                 survDat$event ==3] <- 1
+survDat$event[survDat$event_recur == 500 | 
+                 survDat$event_recur ==900 |
+                 survDat$event_recur ==600 |
+                survDat$event_recur ==650 ] <- 0
+survDat$event[survDat$event_recur == 2 | 
+                 survDat$event_recur ==3] <- 1
+
+survDat$event <- as.numeric(survDat$event)
+survDat$time <- as.numeric(survDat$time)
+survDat$time_diag <-as.numeric(survDat$time_diag)
+
+# Merge pathCalls and Subtypes
+
+dataset$pathCall$uniqID<-paste(dataset$pathCall$Library_ID,dataset$pathCall$Flowcell,sep = ":")
+
+survDat_merged<-merge(survDat,data_sub,by="uniqID")
+
+survDat_merged <- survDat_merged %>%
+  left_join(dataset$subtypeCall %>% select(sampID,PurIST.prob,PurIST,PurIST.graded,DeCAF,DeCAF.prob,DeCAF.graded), by = "sampID") %>%
+  left_join(dataset$pathCall %>% select(uniqID,`Collagenized(yes.1,.no.0)`,`Myxoid(yes.1,.no.0)`,`Myx1/mixed2/Coll3`), by = "uniqID")
+
+survDat_merged <- survDat_merged %>% mutate_if(is.character,as.factor) %>%  mutate_at(c("Collagenized(yes.1,.no.0)","Myxoid(yes.1,.no.0)","Myx1/mixed2/Coll3") , as.factor)
+
+survDat_merged$DeCAF.prob<-as.numeric(survDat_merged$DeCAF.prob)
+survDat_merged$PurIST.prob <-as.numeric(survDat_merged$PurIST.prob)
+survDat_merged$age <- as.numeric(survDat_merged$age)
+survDat_merged$preop_ca199 <- as.numeric(survDat_merged$preop_ca199)
+survDat_merged$Date.of.Dx <- as.numeric(survDat_merged$Date.of.Dx)
+survDat_merged$Date.of.Surgery <- as.numeric(survDat_merged$Date.of.Surgery)
+survDat_merged$Final.Date <- as.numeric(survDat_merged$Final.Date)
+survDat_merged$Pos.LN <- as.numeric(survDat_merged$Pos.LN)
+survDat_merged$T.LN <- as.numeric(survDat_merged$T.LN)
+survDat_merged$pre_op_bmi <- as.numeric(survDat_merged$pre_op_bmi)
+
+survDat <- survDat_merged
+
+
+```
+
+Define as.factor and as.numeric before using for cox-regression
+
+```{r}
+
+survDat <- survDat %>% 
+  mutate_at(c("DeCAF.prob","PurIST.prob","age","pre_op_bmi", "preop_ca199", "Pos.LN","T.LN"), as.numeric) %>%
+  mutate_at(c("neoadj.tx","DeCAF","DeCAF.graded","PurIST","PurIST.graded","Collagenized(yes.1,.no.0)","Myxoid(yes.1,.no.0)","Myx1/mixed2/Coll3","race", "sex", "tobacco_former_current_never", "alcohol_yn", "personal_hx_ca_yn", "bileduct_stent_clean", "preop_cholangitis_yn", "chronic_pancreatitis_yn", "Recent.ABX", "tumor_location.clean", "differentiation_clean_downstaged", "differentiation_clean_upstaged", "T.impute.from.TumorSize.8thEd", "N.impute.from.PosLN.8thEd", "Lymphovascular.Invasion.clean", "PNI.clean", "Margin.(close.<1mm)", "Stage.impute.TN.8thEd", "Neoadj.Regimen.clean", "neo_folfirinox.clean", "neo_GA", "neo_xrt.clean", "Path.Response.score.clean", "Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean", "Adj_Tx.clean", "Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)"),as.factor)
+
+```
+
+
+
+## Cox-Regression and Survfit()
+
+Cox-regression for numeric and categorical variables using coxph().
+
+Pull p-value for each and store in a new dataframe. 
+
+```{r cox}
+
+p_df<-data.frame(variable=character(),p.value=numeric())
+
+model_list<-list()
+variable_list<- list()
+survfit_list <- list()
+survfit_list_cont <- list()
+
+km <- with(survDat, Surv(time,event))
+
+# 1. neoadj.tx ------------------------------------------------------------------
+
+p1 = coxph(km ~ neoadj.tx, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable1 <- as.character(summary(p1)$call$formula[[3]])
+p_value1 <- round(summary(p1)$logtest[[3]],4)
+tmp.Dat1 <-data.frame(variable = variable1, p.value = p_value1)
+
+variable_list[[variable1]]<-variable1
+model_list [[variable1]] <-p1
+
+p_df <- rbind(p_df,tmp.Dat1) 
+
+km_fit1 <- survfit(km ~ neoadj.tx, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable1]] <- km_fit1
+
+# 2. DeCAF --------------------------------------------------------------------
+
+p2 = coxph(km ~ DeCAF, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable2 <- as.character(summary(p2)$call$formula[[3]])
+p_value2 <- round(summary(p2)$logtest[[3]],4)
+tmp.Dat2 <-data.frame(variable = variable2, p.value = p_value2)
+
+variable_list[[variable2]]<-variable2
+model_list [[variable2]] <-p2
+
+p_df <- rbind(p_df,tmp.Dat2) 
+
+km_fit2 <- survfit(km ~ DeCAF, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable2]] <- km_fit2
+
+# 3. DeCAF.graded -----------------------------------------------------------------
+
+p3 = coxph(km ~ DeCAF.graded, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable3 <- as.character(summary(p3)$call$formula[[3]])
+p_value3 <- round(summary(p3)$logtest[[3]],4)
+tmp.Dat3 <-data.frame(variable = variable3, p.value = p_value3)
+
+variable_list[[variable3]]<-variable3
+model_list [[variable3]] <-p3
+
+p_df <- rbind(p_df,tmp.Dat3)
+
+km_fit3 <- survfit(km ~ DeCAF.graded, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable3]] <- km_fit3
+
+# 4. DeCAF.prob --------------------------------------------------------------------
+
+p4 = coxph(km ~ DeCAF.prob, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable4 <- as.character(summary(p4)$call$formula[[3]])
+p_value4 <- round(summary(p4)$logtest[[3]],4)
+tmp.Dat4 <-data.frame(variable = variable4, p.value = p_value4)
+
+variable_list[[variable4]]<-variable4
+
+model_list [[variable4]] <-p4
+
+p_df <- rbind(p_df,tmp.Dat4)
+
+km_fit4 <- survfit(km ~ DeCAF.prob, data = survDat, type = "kaplan-meier")
+
+survfit_list_cont[[variable4]] <- km_fit4
+
+# 5. PurIST --------------------------------------------------------------------
+
+p5 = coxph(km ~ PurIST, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable5 <- as.character(summary(p5)$call$formula[[3]])
+p_value5 <- round(summary(p5)$logtest[[3]],4)
+tmp.Dat5 <-data.frame(variable = variable5, p.value = p_value5)
+
+variable_list[[variable5]]<-variable5
+
+model_list [[variable5]] <-p5
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat5) 
+
+km_fit5 <- survfit(km ~ PurIST, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable5]] <- km_fit5
+
+# 6. PurIST.graded ----------------------------------------------------------------
+
+p6 = coxph(km ~ PurIST.graded, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable6 <- as.character(summary(p6)$call$formula[[3]])
+p_value6 <- round(summary(p6)$logtest[[3]],4)
+tmp.Dat6 <-data.frame(variable = variable6, p.value = p_value6)
+
+variable_list[[variable6]]<-variable6
+
+model_list [[variable6]] <-p6
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat6)
+
+km_fit6 <- survfit(km ~ PurIST.graded, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable6]] <- km_fit6
+
+# 7. PurIST.prob ------------------------------------------------------------------
+
+p7 = coxph(km ~ PurIST.prob, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable7 <- as.character(summary(p7)$call$formula[[3]])
+p_value7 <- round(summary(p7)$logtest[[3]],4)
+tmp.Dat7 <-data.frame(variable = variable7, p.value = p_value7)
+variable_list[[variable7]]<-variable7
+
+model_list [[variable7]] <-p7
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat7)
+
+km_fit7 <- survfit(km ~ PurIST.prob, data = survDat, type = "kaplan-meier")
+
+survfit_list_cont[[variable7]] <- km_fit7
+
+# 8. Collagenized(yes.1,.no.0) ----------------------------------------------------
+
+p8 = coxph(km ~ `Collagenized(yes.1,.no.0)`, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable8 <- as.character(summary(p8)$call$formula[[3]])
+p_value8 <- round(summary(p8)$logtest[[3]],4)
+tmp.Dat8 <-data.frame(variable = variable8, p.value = p_value8)
+variable_list[[variable8]]<-variable8
+
+model_list [[variable8]] <-p8
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat8)
+
+km_fit8 <- survfit(km ~ survDat$`Collagenized(yes.1,.no.0)`, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable8]] <- km_fit8
+
+
+# 9. Myxoid(yes.1,.no.0) ----------------------------------------------------------
+
+p9 = coxph(km ~ `Myxoid(yes.1,.no.0)`, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable9 <- as.character(summary(p9)$call$formula[[3]])
+p_value9 <- round(summary(p9)$logtest[[3]],4)
+tmp.Dat9 <-data.frame(variable = variable9, p.value = p_value9)
+variable_list[[variable9]]<-variable9
+
+model_list [[variable9]] <-p9
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat9)
+
+km_fit9 <- survfit(km ~ survDat$`Myxoid(yes.1,.no.0)`, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable9]] <- km_fit9
+
+
+# 10. Myx1/mixed2/Coll3 ------------------------------------------------------------
+
+p10 = coxph(km ~ `Myx1/mixed2/Coll3`, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable10 <- as.character(summary(p10)$call$formula[[3]])
+p_value10 <- round(summary(p10)$logtest[[3]],4)
+tmp.Dat10 <-data.frame(variable = variable10, p.value = p_value10)
+model_list [[variable10]] <-p10
+variable_list[[variable10]]<-variable10
+
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat10)
+
+km_fit10 <- survfit(km ~ survDat$`Myx1/mixed2/Coll3`, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable10]] <- km_fit10
+
+
+# 11. age --------------------------------------------------------------------
+
+p11 = coxph(km ~ age, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable11 <- as.character(summary(p11)$call$formula[[3]])
+p_value11 <- round(summary(p11)$logtest[[3]],4)
+tmp.Dat11 <-data.frame(variable = variable11, p.value = p_value11)
+variable_list[[variable11]]<-variable11
+
+model_list [[variable11]] <-p11
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat11)
+
+km_fit11 <- survfit(km ~ age, data = survDat, type = "kaplan-meier")
+
+survfit_list_cont[[variable11]] <- km_fit11
+
+# 12. race --------------------------------------------------------------------
+
+p12 = coxph(km ~ race, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable12 <- as.character(summary(p12)$call$formula[[3]])
+p_value12 <- round(summary(p12)$logtest[[3]],4)
+tmp.Dat12 <-data.frame(variable = variable12, p.value = p_value12)
+model_list [[variable12]] <-p12
+variable_list[[variable12]]<-variable12
+
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat12) 
+
+km_fit12 <- survfit(km ~ race, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable12]] <- km_fit12
+
+# 13. sex --------------------------------------------------------------------
+
+p13 = coxph(km ~ sex, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable13 <- as.character(summary(p13)$call$formula[[3]])
+p_value13 <- round(summary(p13)$logtest[[3]],4)
+tmp.Dat13<-data.frame(variable = variable13, p.value = p_value13)
+variable_list[[variable13]]<-variable13
+
+model_list [[variable13]] <-p13
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat13) 
+
+km_fit13 <- survfit(km ~ sex, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable13]] <- km_fit13
+
+# 46. pre_op_bmi --------------------------------------------------------------------
+
+p46 = coxph(km ~ pre_op_bmi, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable46 <- as.character(summary(p46)$call$formula[[3]])
+p_value46 <- round(summary(p46)$logtest[[3]],4)
+tmp.Dat46<-data.frame(variable = variable46, p.value = p_value46)
+variable_list[[variable46]]<-variable46
+
+model_list [[variable46]] <-p46
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat46)
+
+km_fit46 <- survfit(km ~ pre_op_bmi, data = survDat, type = "kaplan-meier")
+
+survfit_list_cont[[variable46]] <- km_fit46
+
+# 14. tobacco_former_current_never --------------------------------------------------------------------
+
+p14 = coxph(km ~ tobacco_former_current_never, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable14 <- as.character(summary(p14)$call$formula[[3]])
+p_value14 <- round(summary(p14)$logtest[[3]],4)
+tmp.Dat14 <-data.frame(variable = variable14, p.value = p_value14)
+variable_list[[variable14]]<-variable14
+
+model_list [[variable14]] <-p14
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat14) 
+
+km_fit14 <- survfit(km ~ tobacco_former_current_never, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable14]] <- km_fit14
+
+# 15. alcohol_yn --------------------------------------------------------------------
+
+p15 = coxph(km ~ alcohol_yn, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable15 <- as.character(summary(p15)$call$formula[[3]])
+p_value15 <- round(summary(p15)$logtest[[3]],4)
+tmp.Dat15<-data.frame(variable = variable15, p.value = p_value15)
+variable_list[[variable15]]<-variable15
+
+model_list [[variable15]] <-p15
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat15) 
+
+km_fit15 <- survfit(km ~ alcohol_yn, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable15]] <- km_fit15
+
+# 16. personal_hx_ca_yn -------------------------------------------------
+
+p16 = coxph(km ~ personal_hx_ca_yn, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable16 <- as.character(summary(p16)$call$formula[[3]])
+p_value16 <- round(summary(p16)$logtest[[3]],4)
+tmp.Dat16 <-data.frame(variable = variable16, p.value = p_value16)
+variable_list[[variable16]]<-variable16
+
+model_list [[variable16]] <-p16
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat16) 
+
+km_fit16 <- survfit(km ~ personal_hx_ca_yn, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable16]] <- km_fit16
+
+# 17. bileduct_stent_clean ---------------------------------------------------------
+
+p17 = coxph(km ~ bileduct_stent_clean, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable17 <- as.character(summary(p17)$call$formula[[3]])
+p_value17 <- round(summary(p17)$logtest[[3]],4)
+tmp.Dat17<-data.frame(variable = variable17, p.value = p_value17)
+variable_list[[variable17]]<-variable17
+
+model_list [[variable17]] <-p17
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat17) 
+
+km_fit17 <- survfit(km ~ bileduct_stent_clean, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable17]] <- km_fit17
+
+
+# 18. preop_ca199 -------------------------------------------------------------------
+
+p18 = coxph(km ~ preop_ca199, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable18 <- as.character(summary(p18)$call$formula[[3]])
+p_value18 <- round(summary(p18)$logtest[[3]],4)
+tmp.Dat18<-data.frame(variable = variable18, p.value = p_value18)
+variable_list[[variable18]]<-variable18
+
+model_list [[variable18]] <-p18
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat18)
+
+km_fit18 <- survfit(km ~ preop_ca199, data = survDat, type = "kaplan-meier")
+
+survfit_list_cont[[variable18]] <- km_fit18
+
+# 19. preop_cholangitis_yn ---------------------------------------------------------
+
+p19 = coxph(km ~ preop_cholangitis_yn, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable19 <- as.character(summary(p19)$call$formula[[3]])
+p_value19 <- round(summary(p19)$logtest[[3]],4)
+tmp.Dat19<-data.frame(variable = variable19, p.value = p_value19)
+variable_list[[variable19]]<-variable19
+
+model_list [[variable19]] <-p19
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat19) 
+
+km_fit19 <- survfit(km ~ preop_cholangitis_yn, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable19]] <- km_fit19
+
+
+# 20. chronic_pancreatitis_yn ---------------------------------------------------------
+
+p20 = coxph(km ~ chronic_pancreatitis_yn, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable20 <- as.character(summary(p20)$call$formula[[3]])
+p_value20 <- round(summary(p20)$logtest[[3]],4)
+tmp.Dat20<-data.frame(variable = variable20, p.value = p_value20)
+variable_list[[variable20]]<-variable20
+
+model_list [[variable20]] <-p20
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat20) 
+
+km_fit20 <- survfit(km ~ chronic_pancreatitis_yn, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable20]] <- km_fit20
+
+
+# 21. Recent ABX ---------------------------------------------------------
+
+p21 = coxph(km ~ Recent.ABX, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable21 <- as.character(summary(p21)$call$formula[[3]])
+p_value21 <- round(summary(p21)$logtest[[3]],4)
+tmp.Dat21<-data.frame(variable = variable21, p.value = p_value21)
+variable_list[[variable21]]<-variable21
+
+model_list [[variable21]] <-p21
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat21) 
+
+km_fit21 <- survfit(km ~ Recent.ABX, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable21]] <- km_fit21
+
+# 22. Tumor Location (Binary) ---------------------------------------------------------
+
+p22 = coxph(km ~ tumor_location.clean, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable22 <- as.character(summary(p22)$call$formula[[3]])
+p_value22 <- round(summary(p22)$logtest[[3]],4)
+tmp.Dat22<-data.frame(variable = variable22, p.value = p_value22)
+variable_list[[variable22]]<-variable22
+
+model_list [[variable22]] <-p22
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat22)
+
+km_fit22 <- survfit(km ~ tumor_location.clean, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable22]] <- km_fit22
+
+# 23. Date.of.Surgery ---------------------------------------------------------
+
+p23 = coxph(km ~ Date.of.Surgery, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable23 <- as.character(summary(p23)$call$formula[[3]])
+p_value23 <- round(summary(p23)$logtest[[3]],4)
+tmp.Dat23<-data.frame(variable = variable23, p.value = p_value23)
+variable_list[[variable23]]<-variable23
+
+model_list [[variable23]] <-p23
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat23) 
+
+km_fit23 <- survfit(km ~ Date.of.Surgery, data = survDat, type = "kaplan-meier")
+
+survfit_list_cont[[variable23]] <- km_fit23
+
+# 24. Date.of.Dx ---------------------------------------------------------
+
+p24 = coxph(km ~ Date.of.Dx, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable24 <- as.character(summary(p24)$call$formula[[3]])
+p_value24 <- round(summary(p24)$logtest[[3]],4)
+tmp.Dat24<-data.frame(variable = variable24, p.value = p_value24)
+variable_list[[variable24]]<-variable24
+
+model_list [[variable24]] <-p24
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat24)
+
+km_fit24 <- survfit(km ~ Date.of.Dx, data = survDat, type = "kaplan-meier")
+
+survfit_list_cont[[variable24]] <- km_fit24
+
+# 25. Final.Date ---------------------------------------------------------
+
+p25 = coxph(km ~ Final.Date, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable25 <- as.character(summary(p25)$call$formula[[3]])
+p_value25 <- round(summary(p25)$logtest[[3]],4)
+tmp.Dat25<-data.frame(variable = variable25, p.value = p_value25)
+variable_list[[variable25]]<-variable25
+
+model_list [[variable25]] <-p25
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat25)
+
+km_fit25 <- survfit(km ~ Final.Date, data = survDat, type = "kaplan-meier")
+
+survfit_list_cont[[variable25]] <- km_fit25
+
+
+# 26. Recurrence.Event ---------------------------------------------------------
+
+# p26 = coxph(km ~ event_recur), data = survDat)
+# 
+# # Extract variable and p-value from the Cox model
+# variable26 <- as.character(summary(p26)$call$formula[[3]])
+# p_value26 <- round(summary(p26)$logtest[[3]],4)
+# tmp.Dat26<-data.frame(variable = variable26, p.value = p_value26)
+# variable_list[[variable26]]<-variable26
+# 
+# model_list [[variable26]] <-p26
+# # Create a data frame
+# p_df <- rbind(p_df,tmp.Dat26)
+# 
+# km_fit26 <- survfit(km ~ event_recur, data = survDat, type = "kaplan-meier")
+
+#survfit_list[[variable26]] <- km_fit26
+
+# 27. differentiation_clean_upstaged ---------------------------------------------------------
+
+p27 = coxph(km ~ differentiation_clean_upstaged, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable27 <- as.character(summary(p27)$call$formula[[3]])
+p_value27 <- round(summary(p27)$logtest[[3]],4)
+tmp.Dat27<-data.frame(variable = variable27, p.value = p_value27)
+variable_list[[variable27]]<-variable27
+
+model_list [[variable27]] <-p27
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat27) 
+
+km_fit27 <- survfit(km ~ differentiation_clean_upstaged, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable27]] <- km_fit27
+
+# 28. differentiation_clean_downstaged ---------------------------------------------------------
+
+p28 = coxph(km ~ differentiation_clean_downstaged, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable28 <- as.character(summary(p28)$call$formula[[3]])
+p_value28 <- round(summary(p28)$logtest[[3]],4)
+tmp.Dat28<-data.frame(variable = variable28, p.value = p_value28)
+variable_list[[variable28]]<-variable28
+
+model_list [[variable28]] <-p28
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat28) 
+
+km_fit28 <- survfit(km ~ differentiation_clean_downstaged, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable28]] <- km_fit28
+
+# # 29a. T.original.clean -----------------------------------------------------------------------
+# 
+# p29a = coxph(km ~ T.original.clean), data = survDat)
+# 
+# # Extract variable and p-value from the Cox model
+# variable29a <- as.character(summary(p29a)$call$formula[[3]])
+# p_value29a <- round(summary(p29a)$logtest[[3]],4)
+# tmp.Dat29a<-data.frame(variable = variable29a, p.value = p_value29a)
+# variable_list[[variable29a]]<-variable29a
+# 
+# model_list [[variable29a]] <-p29a
+# # Create a data frame
+# p_df <- rbind(p_df,tmp.Dat29a) 
+# 
+# km_fit29a <- survfit(km ~ T.original.clean, data = survDat, type = "kaplan-meier")
+# 
+# survfit_list[[variable29a]] <- km_fit29a
+
+# 29. T.impute --------------------------------------------------------------------
+
+p29 = coxph(km ~ T.impute.from.TumorSize.8thEd, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable29 <- as.character(summary(p29)$call$formula[[3]])
+p_value29 <- round(summary(p29)$logtest[[3]],4)
+tmp.Dat29<-data.frame(variable = variable29, p.value = p_value29)
+variable_list[[variable29]]<-variable29
+
+model_list [[variable29]] <-p29
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat29) 
+
+km_fit29 <- survfit(km ~ T.impute.from.TumorSize.8thEd, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable29]] <- km_fit29
+
+# # 30a. N -------------------------------------------------------------------
+# 
+# p30a = coxph(km ~ N), data = survDat)
+# 
+# # Extract variable and p-value from the Cox model
+# variable30a <- as.character(summary(p30a)$call$formula[[3]])
+# p_value30a <- round(summary(p30a)$logtest[[3]],4)
+# tmp.Dat30a<-data.frame(variable = variable30a, p.value = p_value30a)
+# variable_list[[variable30a]]<-variable30a
+# 
+# model_list [[variable30a]] <-p30a
+# # Create a data frame
+# p_df <- rbind(p_df,tmp.Dat30a) 
+# 
+# km_fit30a <- survfit(km ~ N, data = survDat, type = "kaplan-meier")
+# 
+# survfit_list[[variable30a]] <- km_fit30a
+
+# 30. N.impute -------------------------------------------------------------------
+
+p30 = coxph(km ~ N.impute.from.PosLN.8thEd, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable30 <- as.character(summary(p30)$call$formula[[3]])
+p_value30 <- round(summary(p30)$logtest[[3]],4)
+tmp.Dat30<-data.frame(variable = variable30, p.value = p_value30)
+variable_list[[variable30]]<-variable30
+
+model_list [[variable30]] <-p30
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat30) 
+
+km_fit30 <- survfit(km ~ N.impute.from.PosLN.8thEd, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable30]] <- km_fit30
+
+# 31. M -------------------------------------------------------------------
+
+# p = coxph(km ~ M), data = survDat)
+# 
+# # Extract variable and p-value from the Cox model
+# variable <- as.character(summary(p)$call$formula[[3]])
+# p_value31 <- round(summary(p)$logtest[[3]],4)
+# tmp.Dat31<-data.frame(variable = variable, p.value = p_value31)
+# variable_list[[variable]]<-variable
+# 
+# model_list [[variable]] <-p
+# # Create a data frame
+# p_df <- rbind(p_df,tmp.Dat31) 
+
+km_fit31 <- survfit(km ~ M, data = survDat, type = "kaplan-meier")
+
+survfit_list[["M"]] <- km_fit31
+
+# 32. Pos.LN --------------------------------------------------------------------
+
+p32 = coxph(km ~ Pos.LN, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable32 <- as.character(summary(p32)$call$formula[[3]])
+p_value32 <- round(summary(p32)$logtest[[3]],4)
+tmp.Dat32<-data.frame(variable = variable32, p.value = p_value32)
+variable_list[[variable32]]<-variable32
+
+model_list [[variable32]] <-p32
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat32)
+
+km_fit32 <- survfit(km ~ Pos.LN, data = survDat, type = "kaplan-meier")
+
+survfit_list_cont[[variable32]] <- km_fit32
+
+# 33. T.LN --------------------------------------------------------------------
+
+p33 = coxph(km ~ T.LN, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable33 <- as.character(summary(p33)$call$formula[[3]])
+p_value33 <- round(summary(p33)$logtest[[3]],4)
+tmp.Dat33<-data.frame(variable = variable33, p.value = p_value33)
+variable_list[[variable33]]<-variable33
+
+model_list [[variable33]] <-p33
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat33)
+
+km_fit33 <- survfit(km ~ T.LN, data = survDat, type = "kaplan-meier")
+
+survfit_list_cont[[variable33]] <- km_fit33
+
+# 34. Lymphovascular.Invasion.clean ------------------------------------------------------
+
+p34 = coxph(km ~ Lymphovascular.Invasion.clean, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable34 <- as.character(summary(p34)$call$formula[[3]])
+p_value34 <- round(summary(p34)$logtest[[3]],4)
+tmp.Dat34<-data.frame(variable = variable34, p.value = p_value34)
+variable_list[[variable34]]<-variable34
+
+model_list [[variable34]] <-p34
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat34) 
+
+km_fit34 <- survfit(km ~ Lymphovascular.Invasion.clean, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable34]] <- km_fit34
+
+# 35. PNI.clean ------------------------------------------------------------------
+
+p35 = coxph(km ~ PNI.clean, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable35 <- as.character(summary(p35)$call$formula[[3]])
+p_value35 <- round(summary(p35)$logtest[[3]],4)
+tmp.Dat35<-data.frame(variable = variable35, p.value = p_value35)
+variable_list[[variable35]]<-variable35
+
+model_list [[variable35]] <-p35
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat35)
+
+km_fit35 <- survfit(km ~ PNI.clean, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable35]] <- km_fit35
+
+# 36. Margin.(close.<1mm) ----------------------------------------------------------
+
+p36 = coxph(km ~ `Margin.(close.<1mm)`, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable36 <- as.character(summary(p36)$call$formula[[3]])
+p_value36 <- round(summary(p36)$logtest[[3]],4)
+tmp.Dat36<-data.frame(variable = variable36, p.value = p_value36)
+variable_list[[variable36]]<-variable36
+
+model_list [[variable36]] <-p36
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat36)
+
+km_fit36 <- survfit(km ~ survDat$`Margin.(close.<1mm)`, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable36]] <- km_fit36
+
+
+# 37a. Stage.impute --------------------------------------------------------------------
+# 
+# p37a = coxph(km ~ Stage.original.clean), data = survDat)
+# 
+# # Extract variable and p-value from the Cox model
+# variable37a <- as.character(summary(p37a)$call$formula[[3]])
+# p_value37a <- round(summary(p37a)$logtest[[3]],4)
+# tmp.Dat37a<-data.frame(variable = variable37a, p.value = p_value37a)
+# variable_list[[variable37a]]<-variable37a
+# 
+# model_list [[variable37a]] <-p37a
+# # Create a data frame
+# p_df <- rbind(p_df,tmp.Dat37a)
+# 
+# km_fit37a <- survfit(km ~ Stage.original.clean, data = survDat, type = "kaplan-meier")
+# 
+# survfit_list[[variable37a]] <- km_fit37a
+
+# 37. Stage.impute.8thEd --------------------------------------------------------------------
+
+p37 = coxph(km ~ Stage.impute.TN.8thEd, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable37 <- as.character(summary(p37)$call$formula[[3]])
+p_value37 <- round(summary(p37)$logtest[[3]],4)
+tmp.Dat37<-data.frame(variable = variable37, p.value = p_value37)
+variable_list[[variable37]]<-variable37
+
+model_list [[variable37]] <-p37
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat37)
+
+km_fit37 <- survfit(km ~ Stage.impute.TN.8thEd, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable37]] <- km_fit37
+
+# 38. Neoadj.Regimen.clean ---------------------------------------------------------------
+
+p38 = coxph(km ~ Neoadj.Regimen.clean, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable38 <- as.character(summary(p38)$call$formula[[3]])
+p_value38 <- round(summary(p38)$logtest[[3]],4)
+tmp.Dat38<-data.frame(variable = variable38, p.value = p_value38)
+variable_list[[variable38]]<-variable38
+
+model_list [[variable38]] <-p38
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat38)
+
+km_fit38 <- survfit(km ~ Neoadj.Regimen.clean, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable38]] <- km_fit38
+
+# 39. neo_folfirinox.clean ---------------------------------------------------------------
+
+p39 = coxph(km ~ neo_folfirinox.clean, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable39 <- as.character(summary(p39)$call$formula[[3]])
+p_value39 <- round(summary(p39)$logtest[[3]],4)
+tmp.Dat39<-data.frame(variable = variable39, p.value = p_value39)
+variable_list[[variable39]]<-variable39
+
+model_list [[variable39]] <-p39
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat39)
+
+km_fit39 <- survfit(km ~ neo_folfirinox.clean, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable39]] <- km_fit39
+
+
+# 40. neo_GA --------------------------------------------------------------------
+
+p40 = coxph(km ~ neo_GA, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable40 <- as.character(summary(p40)$call$formula[[3]])
+p_value40 <- round(summary(p40)$logtest[[3]],4)
+tmp.Dat40<-data.frame(variable = variable40, p.value = p_value40)
+variable_list[[variable40]]<-variable40
+
+model_list [[variable40]] <-p40
+
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat40)
+
+km_fit40 <- survfit(km ~ neo_GA, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable40]] <- km_fit40
+
+# 41. neo_xrt.clean --------------------------------------------------------------------
+
+p41 = coxph(km ~ neo_xrt.clean, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable41 <- as.character(summary(p41)$call$formula[[3]])
+p_value41 <- round(summary(p41)$logtest[[3]],4)
+tmp.Dat41<-data.frame(variable = variable41, p.value = p_value41)
+variable_list[[variable41]]<-variable41
+
+model_list [[variable41]] <-p41
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat41)
+
+km_fit41 <- survfit(km ~ neo_xrt.clean, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable41]] <- km_fit41
+
+# 42. Path.Response.score.clean -----------------------------------------------------
+
+p42 = coxph(km ~ Path.Response.score.clean, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable42 <- as.character(summary(p42)$call$formula[[3]])
+p_value42 <- round(summary(p42)$logtest[[3]],4)
+tmp.Dat42<-data.frame(variable = variable42, p.value = p_value42)
+variable_list[[variable42]]<-variable42
+
+model_list [[variable42]] <-p42
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat42)
+
+km_fit42 <- survfit(km ~ Path.Response.score.clean, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable42]] <- km_fit42
+
+
+# 43. "Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean"-----------------------------------
+p43 = coxph(km ~ `Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean`, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable43 <- as.character(summary(p43)$call$formula[[3]])
+p_value43 <- round(summary(p43)$logtest[[3]],4)
+tmp.Dat43<-data.frame(variable = variable43, p.value = p_value43)
+variable_list[[variable43]]<-variable43
+
+model_list [[variable43]] <-p43
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat43) 
+
+km_fit43 <- survfit(km ~ survDat$`Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean`, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable43]] <- km_fit43
+
+# 44. "Adj_Tx.clean" ---------------------------------------------------------------------
+
+p44 = coxph(km ~ Adj_Tx.clean, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable44 <- as.character(summary(p44)$call$formula[[3]])
+p_value44 <- round(summary(p44)$logtest[[3]],4)
+tmp.Dat44<-data.frame(variable = variable44, p.value = p_value44)
+variable_list[[variable44]]<-variable44
+
+model_list [[variable44]] <-p44
+
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat44) 
+
+km_fit44 <- survfit(km ~ Adj_Tx.clean, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable44]] <- km_fit44
+
+#45. "Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)"------------------------------------------------------
+
+p45 = coxph(km ~ `Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)`, data = survDat)
+
+# Extract variable and p-value from the Cox model
+variable45 <- as.character(summary(p45)$call$formula[[3]])
+p_value45 <- round(summary(p45)$logtest[[3]],4)
+tmp.Dat45<-data.frame(variable = variable45, p.value = p_value45)
+variable_list[[variable45]]<-variable45
+
+model_list [[variable45]] <-p45
+# Create a data frame
+p_df <- rbind(p_df,tmp.Dat45) 
+
+km_fit45 <- survfit(km ~ survDat$`Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)`, data = survDat, type = "kaplan-meier")
+
+survfit_list[[variable45]] <- km_fit45
+
+
+```
+
+### Write to excel
+
+```{r excel}
+
+#save as excel
+
+write.xlsx(p_df,file = "/work/users/a/r/arthih/Laura_Clinical_Parsing/Survival_pValues_121323.xlsx")
+
+```
+
+```{r tbl}
+
+tbl_list<-list()
+
+for (i in seq_along(model_list)){
+  tbl <- model_list[[i]] %>% tbl_regression()
+  tbl_list [[i]] <-tbl
+}
+
+tbl_exp_list<-list()
+
+for (i in seq_along(model_list)){
+  tbl <- model_list[[i]] %>% tbl_regression(exponentiate = T)
+  tbl_exp_list [[i]] <-tbl
+}
+
+tbl<-tbl_stack(tbl_list)
+tbl_exp<-tbl_stack(tbl_exp_list)
+
+tbl_exp_df <- tbl_exp %>% bold_labels() %>% as.data.frame()
+
+merged_tbl<-tbl_merge(list(tbl, tbl_exp)) %>% bold_labels()
+
+merged_tbl %>% as_gt() %>% gt::gtsave("Coxph_HR_Exp_121323.html")
+
+tbl_df<-merged_tbl %>% as.data.frame()
+tbl_df<-tbl_df[,-4]
+colnames(tbl_df)<-c("Variables","log(HR)","95%CI","exp(HR)","exp(95%CI)","p-value")
+
+```
+
+### GT table for Categorical variables
+
+Publication ready table
+
+```{r tbl2}
+
+surv_tbl_time <- survfit_list %>% tbl_survfit(times = c(6,12,24,60),
+                                              label_header = "**{time} Months**"
+                                               ) %>% add_p(test = "logrank")
+
+surv_tbl_median <- survfit_list %>% tbl_survfit(probs = 0.5,
+                                                label_header = "**Median (95% CI)**"
+                                                ) %>% add_n() %>% add_nevent()
+
+surv_tbl_cat <- tbl_merge(list(surv_tbl_median,surv_tbl_time), tab_spanner = F)
+
+# surv_tbl_cat %>% bold_labels() %>% as_gt %>% gt::gtsave("/work/users/a/r/arthih/Laura_Clinical_Parsing/Survival_fit_Categorical_variables_112623.html")
+```
+### merge tables
+
+
+```{r merge}
+
+tbl_merge(list(tbl_n,tbl_nevent,surv_tbl_cat, tbl_exp)
+) %>% as_gt %>% gt::gtsave("Univariate_Survival.html")
+#gtsummary::as_flex_table() %>%
+ # flextable::set_caption("Hzard ratios from Cox PH model and Survival times from Survfit")
+
+
+```
+
+## Add N 
+25th April 2024.
+
+```{r}
+# calculate the total N by variable
+tbl_n <- survDat %>%select( neoadj.tx,
+                            DeCAF,
+                            DeCAF.graded,
+                            PurIST,
+                            PurIST.graded,
+                            `Collagenized(yes.1,.no.0)`,
+                            `Myxoid(yes.1,.no.0)`,
+                            `Myx1/mixed2/Coll3`,
+                            race,
+                            sex,
+                            tobacco_former_current_never,
+                            alcohol_yn,
+                            personal_hx_ca_yn,
+                            bileduct_stent_clean,
+                            preop_cholangitis_yn,
+                            chronic_pancreatitis_yn,
+                            Recent.ABX,
+                            tumor_location.clean,
+                            event_recur,
+                            differentiation_clean_upstaged,
+                            differentiation_clean_downstaged,
+                            T.impute.from.TumorSize.8thEd,
+                            N.impute.from.PosLN.8thEd,
+                            M,
+                            Lymphovascular.Invasion.clean,
+                            PNI.clean,
+                            `Margin.(close.<1mm)`,
+                            Stage.impute.TN.8thEd,
+                            Neoadj.Regimen.clean,
+                            neo_folfirinox.clean,
+                            neo_GA,
+                            neo_xrt.clean,
+                            Path.Response.score.clean,
+                            `Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean`,
+                            Adj_Tx.clean,
+                            `Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)`,
+                            DeCAF.prob,
+                            PurIST.prob,
+                            age,
+                            pre_op_bmi,
+                            preop_ca199,
+                            Date.of.Surgery,
+                            Date.of.Dx,
+                            Final.Date,
+                            Pos.LN,
+                            T.LN) %>%
+  tbl_summary(statistic = all_categorical() ~ "{n}", type = list(c(neoadj.tx,alcohol_yn,bileduct_stent_clean, personal_hx_ca_yn, preop_cholangitis_yn,chronic_pancreatitis_yn,Recent.ABX,Lymphovascular.Invasion.clean,PNI.clean,neo_folfirinox.clean,neo_GA,neo_xrt.clean,`Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean`,Adj_Tx.clean,`Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)`)~'categorical'),missing = "no") %>%
+  modify_header(stat_0 ~ "**N**") %>% add_n() %>%
+  modify_footnote(everything() ~ NA)  
+
+# calculate the event N by variable
+tbl_nevent <- survDat %>% filter(event == 2) %>% select( neoadj.tx,
+                            DeCAF,
+                            DeCAF.graded,
+                            PurIST,
+                            PurIST.graded,
+                            `Collagenized(yes.1,.no.0)`,
+                            `Myxoid(yes.1,.no.0)`,
+                            `Myx1/mixed2/Coll3`,
+                            race,
+                            sex,
+                            tobacco_former_current_never,
+                            alcohol_yn,
+                            personal_hx_ca_yn,
+                            bileduct_stent_clean,
+                            preop_cholangitis_yn,
+                            chronic_pancreatitis_yn,
+                            Recent.ABX,
+                            tumor_location.clean,
+                            event_recur,
+                            differentiation_clean_upstaged,
+                            differentiation_clean_downstaged,
+                            T.impute.from.TumorSize.8thEd,
+                            N.impute.from.PosLN.8thEd,
+                            M,
+                            Lymphovascular.Invasion.clean,
+                            PNI.clean,
+                            `Margin.(close.<1mm)`,
+                            Stage.impute.TN.8thEd,
+                            Neoadj.Regimen.clean,
+                            neo_folfirinox.clean,
+                            neo_GA,
+                            neo_xrt.clean,
+                            Path.Response.score.clean,
+                            `Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean`,
+                            Adj_Tx.clean,
+                            `Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)`,DeCAF.prob,PurIST.prob,age,pre_op_bmi,preop_ca199,Date.of.Surgery,Date.of.Dx,Final.Date,Pos.LN,T.LN) %>% 
+  tbl_summary(statistic = all_categorical() ~ "{n}", type = list(c(neoadj.tx,personal_hx_ca_yn, preop_cholangitis_yn,chronic_pancreatitis_yn,Recent.ABX,alcohol_yn,bileduct_stent_clean,Lymphovascular.Invasion.clean,PNI.clean,neo_folfirinox.clean,neo_GA,neo_xrt.clean,`Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean`,Adj_Tx.clean,`Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)`)~'categorical'),missing = "no") %>%
+  modify_header(stat_0 ~ "**Event N**")  %>% add_n() %>%
+  modify_footnote(everything() ~ NA)
+
+
+tbl_merge(list(tbl_n,tbl_nevent)) %>% as_gt() %>% gt::gtsave("N_variables_042524.html")
+```
+
+
+
+```{r tbl_style, eval=FALSE}
+surv_tbl_cat[["table_body"]][["label"]][23]
+surv_tbl_cat[["table_body"]][["label"]][26]
+surv_tbl_cat[["table_body"]][["label"]][29]
+surv_tbl_cat[["table_body"]][["label"]][97]
+surv_tbl_cat[["table_body"]][["label"]][124]
+surv_tbl_cat[["table_body"]][["label"]][130]
+surv_tbl_cat[["table_body"]][["label"]][23]<-"Collagenized(yes.1,.no.0)"
+surv_tbl_cat[["table_body"]][["label"]][26]<-"Myxoid(yes.1,.no.0)"
+surv_tbl_cat[["table_body"]][["label"]][29]<-"Myx1/mixed2/Coll3"
+surv_tbl_cat[["table_body"]][["label"]][97]<- "Margin.(close.<1mm)"
+surv_tbl_cat[["table_body"]][["label"]][124]<- "Adj.Tx.(Yes.if.got.any.treatment.for.PDAC).clean"
+surv_tbl_cat[["table_body"]][["label"]][130]<- "Recur.(NA.if.non-PDAC.or.non-resectable.disease,.even.if.treated.for.other.causes)"
+surv_tbl_cat[["table_body"]][["label"]][23]
+surv_tbl_cat[["table_body"]][["label"]][26]
+surv_tbl_cat[["table_body"]][["label"]][29]
+surv_tbl_cat[["table_body"]][["label"]][97]
+surv_tbl_cat[["table_body"]][["label"]][124]
+surv_tbl_cat[["table_body"]][["label"]][130]
+
+
+```
+
+
+### tbl_survfit()
+
+```{r tbl_survfit}
+
+surv_df <- data.frame()
+
+for (i in 1:seq_along(model_list)){
+  surv <- survfit(model_list[[14]])
+  sumObj <- surv_summary(surv, data = survDat) 
+  df <- attr(sumObj,"table") %>% as_tibble()
+  tmp_df <- data.frame(Variable = names(model_list)[[1]], n = df["records",], events = df["events",], median = df["median",], `0.95LCL`= df["0.95LCL",], `0.95UCL`= df["0.95UCL",])
+  surv_df <- rbind(surv_df,tmp_df)
+}
+
+```
+
+
+#### Assumptions test
+
+```{r assumptions}
+
+assumption <- list()
+for (i in c(1:25,27:45)){
+  assum_test <- cox.zph(model_list[[i]])
+  assumption [[i]] <-assum_test
+}
+
+```
+
+## Save Workbook
+
+```{r workbook}
+# Create an Excel workbook
+wb <- createWorkbook()
+
+addWorksheet(wb, sheetName = "P-values")
+writeDataTable(wb, sheet = 1, x = p_df)
+
+addWorksheet(wb, sheetName = "HR")
+writeDataTable(wb, sheet = 2, x = tbl_df)
+
+saveWorkbook(wb, "Survival_Values_final_112623.xlsx")
+```
+
+# Chronic Panc vs OS
+
+```{r ChronPancOS}
+
+pdf("/work/users/a/r/arthih/Laura_Clinical_Parsing/ChronicPanc_OS_kmplot.pdf", onefile = F)
+
+km <- with(survDat, Surv(time,event))
+
+p20 = coxph(km ~ chronic_pancreatitis_yn, data = survDat)
+
+bic = round(BIC(p20),3)
+hr <- round(1/summary(p20)$coefficients[2],3)
+km_fit20 <- survfit(km ~ chronic_pancreatitis_yn, data = survDat, type = "kaplan-meier")
+p20 <- ggsurvplot(km_fit20, conf.int = F, pval = T,
+                          legend.title="",break.time.by = 12,
+                          legend.labs=c("Yes","No"),
+                          palette = c("violetred1","turquoise4"),
+                          xlab = "Time (months)", risk.table = T,
+                          title = paste("YehSeq\nChronic Pancreatitis HR=",hr,
+                                        " BIC=",bic,sep=""))
+print(p20)
+
+dev.off()
+```
