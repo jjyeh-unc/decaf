@@ -6,7 +6,7 @@ A. function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run 
 
 B. an example dataframe (example.rds).
 
-C. all data and scripts used to train/validate DeCAF, and generate figures/tables associated with the manuscripts (manuscript_data_scripts).
+C. all data and scripts used to train/validate DeCAF, and generate figures/tables associated with the manuscript (manuscript_data_scripts).
 
 Disclaimer: DeCAF is patent pending and access/use is for not-for-profit research only.
 
