@@ -8,19 +8,25 @@
 - Non-standard hardware is not required.
 - Installation time is minimal by donwloading just decaf_functions.R, decaf_classifier.Rdata and example.rds.
 - A typical runtime for a dataset with around 150 samples is less than 5 seconds.
+- Disclaimer: DeCAF is patent pending and access/use is for not-for-profit research only.
 
-This repo contains:
+# This repo contains:
 
-A. function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run DeCAF, as well as an example dataframe (example.rds).
-
-B. newly generated bulk RNAseq (N=129, UNC-bulk) and scRNAseq (N=6, UNC-sc) data.
-
-C. scripts and other parsed public data used to train/validate DeCAF, and generate figures/tables associated with the manuscript (manuscript_data_scripts).
-
-Disclaimer: DeCAF is patent pending and access/use is for not-for-profit research only.
+- Function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run DeCAF, as well as an example dataframe (example.rds).
+- Scripts needed to reproduce manuscript results, including to train/validate DeCAF, and generate figures/tables (manuscript_scripts).
 
 
-# Installation
+# About datasets:
+
+- Newly generated raw data are available upon request by the reviewers and will made available to the public after the manuscript is accepted.
+- Processed datasets are too large to be deposited on github, and can be found at: 
+- Processed datasets contains:
+A. 11 public bulk RNAseq datasets.
+B. newly generated bulk RNAseq data (N=129, UNC-bulk).
+C. newly generated scRNAseq data (N=6, UNC-sc).
+
+
+# Install DeCAF
 Download decaf_functions.R, decaf_classifier.Rdata and example.rds in the working directory.
 
 # Run DeCAF
