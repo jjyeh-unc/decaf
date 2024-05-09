@@ -5,7 +5,8 @@
 
 - Main DeCAF objects: function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run DeCAF, as well as an example dataframe (example.rds).
 - Scripts needed to reproduce manuscript results, including to train/validate DeCAF, and generate figures/tables (manuscript_scripts).
-- Datasets in processed .rds format (manuscript_data).
+- Processed datasets (manuscript_data).
+- Results, including figures and tables, involved in the manuscript (manuscript_results).
 
 
 # System requirements
