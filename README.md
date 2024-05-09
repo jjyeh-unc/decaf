@@ -3,18 +3,9 @@
 
 # This repo contains:
 
-- Function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run DeCAF, as well as an example dataframe (example.rds).
+- Main DeCAF objects: function (decaf_functions.R) and data (decaf_classifier.Rdata) needed to run DeCAF, as well as an example dataframe (example.rds).
 - Scripts needed to reproduce manuscript results, including to train/validate DeCAF, and generate figures/tables (manuscript_scripts).
-
-
-# About datasets:
-
-- Newly generated raw data are available upon request by the reviewers and will made available to the public after the manuscript is accepted.
-- Processed datasets are too large to be deposited on github, and can be found at: 
-- Processed datasets contains:
-A. 11 public bulk RNAseq datasets.
-B. newly generated bulk RNAseq data (N=129, UNC-bulk).
-C. newly generated scRNAseq data (N=6, UNC-sc).
+- Datasets in processed .rds format (manuscript_data).
 
 
 # System requirements
